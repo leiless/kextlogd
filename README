@@ -1,0 +1,19 @@
+kextlogd - A macOS kernel extension log recorder
+
+This log recorder can be used to logging generic kernel extension and IOKit driver
+
+Theorem:
+kextlogd will spawn a /usr/bin/log process and redirect its output into a file
+
+NOTE:
+Currently supported macOS 10.12+
+Due to kext cache mechanism  /usr/bin/log itself may unstable for logging
+	i.e. sometimes it log nothing even if your kext fires a log
+
+TODO:
+support macOS 10.11 and lower
+use getopt_long(3) instead of getopt(3)
+use pure C to rewrite if possible
+fulfill this README
+add install/uninstall targets into Makefile
+

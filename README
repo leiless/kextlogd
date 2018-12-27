@@ -7,8 +7,11 @@ kextlogd will spawn a /usr/bin/log process and redirect its output into a file
 
 NOTE:
 Currently supported macOS 10.12+
-Due to kext cache mechanism  /usr/bin/log itself may unstable for logging
+Due to kext cache mechanism(need verbose explanation)  /usr/bin/log itself may unstable for logging
 	i.e. sometimes it log nothing even if your kext fires a log
+
+In such case, a wordaround is to clean the kext cache:
+sudo kextcache -invalidate /
 
 TODO:
 support macOS 10.11 and lower

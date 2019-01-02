@@ -1,15 +1,24 @@
 /**
- * Created 180817
+ * Kernel extension logging utility
  *
- * TODO: rewrite this shit using pure C
+ * Created 180817
  */
 
 #import <Foundation/Foundation.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <unistd.h>
 #include <mach-o/ldsyms.h>
+
+#define LOG(fmt, ...)       NSLog(@fmt, ##__VA_ARGS__)
+#define LOG_ERR(fmt, ...)   LOG("ERR: " fmt, ##__VA_ARGS__)
+#ifdef DEBUG
+#define LOG_DBG(fmt, ...)   LOG("DBG: " fmt, ##__VA_ARGS__)
+#else
+#define LOG_DBG(fmt, ...)   (void) (0, ##__VA_ARGS__)
+#endif
 
 /**
  * Initialize a file handle from given path
@@ -22,14 +31,14 @@ static NSFileHandle *create_filehandle(NSString *path)
     if (![fm fileExistsAtPath:path]) {
         /* Will truncate file if already exists */
         if (![fm createFileAtPath:path contents:nil attributes:nil]) {
-            fprintf(stderr, "ERR: NSFileManager createFileAtPath\n");
+            LOG_ERR("NSFileManager createFileAtPath");
             return nil;
         }
     }
 
     NSFileHandle *file = [NSFileHandle fileHandleForWritingAtPath:path];
     if (file == nil) {
-        fprintf(stderr, "ERR: NSFileHandle fileHandleForWritingAtPath\n");
+        LOG_ERR("NSFileHandle fileHandleForWritingAtPath");
         return nil;
     }
 
@@ -70,7 +79,7 @@ static int recycle_file(NSFileHandle **fhp, NSString *path, long max_sz, long cy
         sprintf(new, "%s.%ld", [path UTF8String], i+1);
         e = rename(old, new);
         if (e != 0 && errno != ENOENT) {
-            fprintf(stderr, "ERR: #1 mv %s %s  errno: %d\n", old, new, errno);
+            LOG_ERR("#1 mv %s %s  errno: %d", old, new, errno);
             return -1;
         }
     }
@@ -81,7 +90,7 @@ static int recycle_file(NSFileHandle **fhp, NSString *path, long max_sz, long cy
     sprintf(new, "%s.1", [path UTF8String]);
     e = rename(old, new);
     if (e != 0) {
-        fprintf(stderr, "ERR: #2 mv %s %s  errno: %d\n", old, new, errno);
+        LOG_ERR("#2 mv %s %s  errno: %d", old, new, errno);
         *fhp = [NSFileHandle fileHandleWithStandardError];
         return -1;
     }
@@ -154,13 +163,15 @@ int main(int argc, char *argv[])
     if (optind != argc - 1) usage();
     char *name = argv[optind];
 
-    fprintf(stdout, "%s  (built: %s %s uuid: %s)\n\n",
-            PCOMM, __DATE__, __TIME__, [egoUUID() UTF8String]);
+    printf("%s  (built: %s %s uuid: %s)\n\n",
+        PCOMM, __DATE__, __TIME__, [egoUUID() UTF8String]);
 
     NSTask *task = [[NSTask alloc] init];
     [task setLaunchPath: @"/bin/sh"];
     NSString *cmd = [NSString stringWithFormat:@"/usr/bin/log stream --predicate 'processID == 0 and sender == \"%s\"'", name];
     [task setArguments:@[@"-c", cmd]];
+    // syslog | grep -w 'kernel\[0\]' | grep -w XXX
+
 
     /**
      * The NSPipe seems line buffered

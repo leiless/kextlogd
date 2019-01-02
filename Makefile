@@ -3,7 +3,7 @@
 #
 
 CC=clang
-CFLAGS=-framework Foundation -Wall -Wextra -DDEBUG
+CFLAGS=-framework Foundation -Wall -Wextra -g -DDEBUG
 SOURCES=$(wildcard *.m)
 EXECUTABLE=kextlogd
 RM=rm -f

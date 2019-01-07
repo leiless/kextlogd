@@ -118,21 +118,70 @@ static void usage(void)
  *  https://stackoverflow.com/questions/10119700
  *  https://lowlevelbits.org/parsing-mach-o-files
  */
-NSString *egoUUID(void)
+const char *mh_exec_uuid(void)
 {
     const uint8_t *c = (const uint8_t *)(&_mh_execute_header + 1);
     for (uint32_t i = 0; i < _mh_execute_header.ncmds; i++) {
         if (((const struct load_command *) c)->cmd == LC_UUID) {
             c += sizeof(struct load_command);
-            return [NSString stringWithFormat:@"%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
+            return [[NSString stringWithFormat:
+                    @"%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
                     c[0], c[1], c[2], c[3], c[4], c[5], c[6], c[7],
-                    c[8], c[9], c[10], c[11], c[12], c[13], c[14], c[15]];
+                    c[8], c[9], c[10], c[11], c[12], c[13], c[14], c[15]] UTF8String];
         } else {
             c += ((const struct load_command *) c)->cmdsize;
         }
     }
 
-    return [NSString string];
+    return [[NSString string] UTF8String];
+}
+
+/* XXX: ONLY quote those deprecated functions */
+#define SUPPRESS_WARN_DEPRECATED_DECL_BEGIN     \
+    _Pragma("clang diagnostic push")            \
+    _Pragma("clang diagnostic ignored \"-Wdeprecated-declarations\"")
+
+#define SUPPRESS_WARN_DEPRECATED_DECL_END       \
+    _Pragma("clang diagnostic pop")
+
+#define CHECK_STATUS(ex)   NSCParameterAssert(ex)
+
+/**
+ * Retrieve system(product-level) version
+ * @return      system version in format of xxyyzz
+ *              which represents major, minor, patch version respectively
+ *              0 indicates an error occurred
+ * see: sw_vers(1)
+ */
+long os_version(void)
+{
+    static volatile long ver = 0;
+    if (ver != 0) goto out_exit;
+
+    if ([[NSProcessInfo processInfo] respondsToSelector:@selector(operatingSystemVersion)]) {
+        NSOperatingSystemVersion v = [[NSProcessInfo processInfo] operatingSystemVersion];
+        CHECK_STATUS(v.majorVersion < 100);
+        CHECK_STATUS(v.minorVersion < 100);
+        CHECK_STATUS(v.patchVersion < 100);
+
+        ver = 10000 * v.majorVersion + 100 * v.minorVersion + v.patchVersion;
+    } else {
+        SInt32 v[3];
+SUPPRESS_WARN_DEPRECATED_DECL_BEGIN
+        if (Gestalt(gestaltSystemVersionMajor, v) == noErr &&
+            Gestalt(gestaltSystemVersionMinor, v+1) == noErr &&
+            Gestalt(gestaltSystemVersionBugFix, v+2) == noErr) {
+SUPPRESS_WARN_DEPRECATED_DECL_END
+            CHECK_STATUS(v[0] < 100);
+            CHECK_STATUS(v[1] < 100);
+            CHECK_STATUS(v[2] < 100);
+
+            ver = 10000 * v[0] + 100 * v[1] + v[2];
+        }
+    }
+
+out_exit:
+    return ver;
 }
 
 int main(int argc, char *argv[])
@@ -143,6 +192,7 @@ int main(int argc, char *argv[])
     long max_sz = 0;
     long cycnt = 0;
     int ch;
+
     while ((ch = getopt(argc, argv, "o:m:c:")) != -1) {
         switch (ch) {
         case 'o':
@@ -163,15 +213,18 @@ int main(int argc, char *argv[])
     if (optind != argc - 1) usage();
     char *name = argv[optind];
 
-    printf("%s  (built: %s %s uuid: %s)\n\n",
-        PCOMM, __DATE__, __TIME__, [egoUUID() UTF8String]);
+    printf("%s  (built: %s %s uuid: %s)\n\n", PCOMM, __DATE__, __TIME__, mh_exec_uuid());
 
     NSTask *task = [[NSTask alloc] init];
     [task setLaunchPath: @"/bin/sh"];
-    NSString *cmd = [NSString stringWithFormat:@"/usr/bin/log stream --predicate 'processID == 0 and sender == \"%s\"'", name];
-    [task setArguments:@[@"-c", cmd]];
-    // syslog | grep -w 'kernel\[0\]' | grep -w XXX
 
+    NSString *cmd;
+    if (os_version() >= 101200L) {
+        cmd = [NSString stringWithFormat:@"/usr/bin/log stream --predicate 'processID == 0 and sender == \"%s\"'", name];
+    } else {
+        cmd = [NSString stringWithFormat:@"/usr/bin/syslog -w 0 -k PID 0 -k Sender kernel | /usr/bin/grep -w '%s'", name];
+    }
+    [task setArguments:@[@"-c", cmd]];
 
     /**
      * The NSPipe seems line buffered

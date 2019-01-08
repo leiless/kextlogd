@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <unistd.h>
+#include <getopt.h>
 #include <mach-o/ldsyms.h>
 
 #define LOG(fmt, ...)       NSLog(@fmt, ##__VA_ARGS__)
@@ -105,11 +106,18 @@ static int recycle_file(NSFileHandle **fhp, NSString *path, long max_sz, long cy
     return 0;
 }
 
-#define PCOMM       "kextlogd"
+#define CMDNAME     "kextlogd"
+#define VERSION     "0.3"
 
 static void usage(void)
 {
-    fprintf(stderr, "Usage: %s [-o FILE] [-m NUM] [-c NUM] NAME\n\n", PCOMM);
+    fprintf(stderr,
+            "usage:\n"
+            "%s [-o file] [-x number] [-c number] name\n"
+            "           -o, --output            Output file path\n"
+            "           -x, --max-size          Maximum single rolling file size\n"
+            "           -c, --rolling-count     Maximum rolling file count\n",
+            CMDNAME);
     exit(1);
 }
 
@@ -191,14 +199,23 @@ int main(int argc, char *argv[])
     const char *output = NULL;
     long max_sz = 0;
     long cycnt = 0;
-    int ch;
 
-    while ((ch = getopt(argc, argv, "o:m:c:")) != -1) {
-        switch (ch) {
+    static struct option long_options[] = {
+        {"output", required_argument, NULL, 'o'},
+        {"max-size", required_argument, NULL, 'x'},
+        {"rolling-count", required_argument, NULL, 'c'},
+        {NULL, no_argument, NULL, 0},
+    };
+
+    int opt;
+    int long_index;
+
+    while ((opt = getopt_long(argc, argv, "o:x:c:", long_options, &long_index)) != -1) {
+        switch (opt) {
         case 'o':
             output = optarg;
             break;
-        case 'm':
+        case 'x':
             max_sz = atol(optarg);
             break;
         case 'c':
@@ -213,7 +230,8 @@ int main(int argc, char *argv[])
     if (optind != argc - 1) usage();
     char *name = argv[optind];
 
-    printf("%s  (built: %s %s uuid: %s)\n\n", PCOMM, __DATE__, __TIME__, mh_exec_uuid());
+    printf("%s v%s (built: %s %s  uuid: %s)\n",
+            CMDNAME, VERSION, __DATE__, __TIME__, mh_exec_uuid());
 
     NSTask *task = [[NSTask alloc] init];
     [task setLaunchPath: @"/bin/sh"];
@@ -233,6 +251,9 @@ int main(int argc, char *argv[])
     NSPipe *pipe = [NSPipe pipe];
     [task setStandardOutput:pipe];
     [task setStandardError:pipe];
+    /*
+     * TODO: Use atexit(3) to add a hook to kill spawn child process
+     */
     [task launch];
 
     NSFileHandle *fh = [pipe fileHandleForReading];
@@ -245,7 +266,7 @@ int main(int argc, char *argv[])
         unsigned long long off = [file seekToEndOfFile];
         if (off != 0) {
             /* Separate each instance log */
-            [file writeData:[@"\n\n" dataUsingEncoding:NSUTF8StringEncoding]];
+            [file writeData:[@"\n" dataUsingEncoding:NSUTF8StringEncoding]];
         }
     }
     NSData *data;

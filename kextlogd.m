@@ -13,8 +13,8 @@
 #include <getopt.h>
 #include <mach-o/ldsyms.h>
 
-#define LOG(fmt, ...)       NSLog(@fmt, ##__VA_ARGS__)
-#define LOG_ERR(fmt, ...)   LOG("ERR: " fmt, ##__VA_ARGS__)
+#define LOG(fmt, ...)       printf(fmt, ##__VA_ARGS__)
+#define LOG_ERR(fmt, ...)   fprintf(stderr, "ERR: " fmt, ##__VA_ARGS__)
 #ifdef DEBUG
 #define LOG_DBG(fmt, ...)   LOG("DBG: " fmt, ##__VA_ARGS__)
 #else
@@ -230,8 +230,8 @@ int main(int argc, char *argv[])
     if (optind != argc - 1) usage();
     char *name = argv[optind];
 
-    printf("%s v%s (built: %s %s  uuid: %s)\n",
-            CMDNAME, VERSION, __DATE__, __TIME__, mh_exec_uuid());
+    LOG("%s v%s (built: %s %s  uuid: %s)\n",
+        CMDNAME, VERSION, __DATE__, __TIME__, mh_exec_uuid());
 
     NSTask *task = [[NSTask alloc] init];
     [task setLaunchPath: @"/bin/sh"];
@@ -242,6 +242,7 @@ int main(int argc, char *argv[])
     } else {
         cmd = [NSString stringWithFormat:@"/usr/bin/syslog -w 0 -k PID 0 -k Sender kernel | /usr/bin/grep -w '%s'", name];
     }
+    LOG_DBG("cmd: %s", [cmd UTF8String]);
     [task setArguments:@[@"-c", cmd]];
 
     /**

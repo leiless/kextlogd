@@ -52,10 +52,10 @@ static NSFileHandle *create_filehandle(NSString *path)
  * @fhp         file handle pointer
  * @path        backing file path associated to the file handle
  * @max_sz      maximum file size in bytes  <=0 indicate no write limit
- * @cycnt       FIFO recycle count limit    <=0 indicate no recycle at all
+ * @rollcnt     FIFO recycle count limit    <=0 indicate no rolling at all
  * @return      0 if success  -1 o.w.
  */
-static int recycle_file(NSFileHandle **fhp, NSString *path, long max_sz, long cycnt)
+static int recycle_file(NSFileHandle **fhp, NSString *path, long max_sz, long rollcnt)
 {
     assert(fhp != nil);
     NSFileHandle *fh = *fhp;
@@ -64,8 +64,8 @@ static int recycle_file(NSFileHandle **fhp, NSString *path, long max_sz, long cy
     if (fh == [NSFileHandle fileHandleWithStandardOutput]) return 0;
     assert(path != nil);
 
-    if (max_sz <= 0 || [fh offsetInFile] < (uint64_t) max_sz) return 0;
-    if (cycnt <= 0) {
+    if (max_sz == 0 || [fh offsetInFile] < (uint64_t) max_sz) return 0;
+    if (rollcnt == 0) {
         [fh truncateFileAtOffset:0];
         return 0;
     }
@@ -74,7 +74,7 @@ static int recycle_file(NSFileHandle **fhp, NSString *path, long max_sz, long cy
     char old[sz];
     char new[sz];
     int e;
-    long i = cycnt;
+    long i = rollcnt;
     while (--i > 0) {
         sprintf(old, "%s.%ld", [path UTF8String], i);
         sprintf(new, "%s.%ld", [path UTF8String], i+1);
@@ -198,7 +198,7 @@ int main(int argc, char *argv[])
 
     const char *output = NULL;
     long max_sz = 0;
-    long cycnt = 0;
+    long rollcnt = 0;
 
     static struct option long_options[] = {
         {"output", required_argument, NULL, 'o'},
@@ -209,6 +209,7 @@ int main(int argc, char *argv[])
 
     int opt;
     int long_index;
+    char *endptr;
 
     while ((opt = getopt_long(argc, argv, "o:x:c:", long_options, &long_index)) != -1) {
         switch (opt) {
@@ -216,10 +217,28 @@ int main(int argc, char *argv[])
             output = optarg;
             break;
         case 'x':
-            max_sz = atol(optarg);
+            errno = 0;
+            max_sz = strtol(optarg, &endptr, 10);
+            if (errno != 0) {
+                LOG_ERR("strtol(3) failure  errno: %d", errno);
+                exit(EXIT_FAILURE);
+            }
+            if (*endptr != '\0' || max_sz < 0) {
+                LOG_ERR("Bad size: %s", optarg);
+                exit(EXIT_FAILURE);
+            }
             break;
         case 'c':
-            cycnt = atol(optarg);
+            errno = 0;
+            rollcnt = strtol(optarg, &endptr, 10);
+            if (errno != 0) {
+                LOG_ERR("strtol(3) failure  errno: %d", errno);
+                exit(EXIT_FAILURE);
+            }
+            if (*endptr != '\0' || rollcnt < 0) {
+                LOG_ERR("Bad count: %s", optarg);
+                exit(EXIT_FAILURE);
+            }
             break;
         case '?':
         default:
@@ -232,6 +251,8 @@ int main(int argc, char *argv[])
 
     LOG("%s v%s (built: %s %s  uuid: %s)",
         CMDNAME, VERSION, __DATE__, __TIME__, mh_exec_uuid());
+
+    LOG_DBG("output: %s max_size: %ld rolling_count: %ld", output, max_sz, rollcnt);
 
     NSTask *task = [[NSTask alloc] init];
     [task setLaunchPath:@"/bin/sh"];
@@ -279,7 +300,7 @@ int main(int argc, char *argv[])
         if ([data length] != 0) {
             [file writeData:data];
 
-            if (recycle_file(&file, path, max_sz, cycnt) != 0) {
+            if (recycle_file(&file, path, max_sz, rollcnt) != 0) {
                 [file writeData:[@"\nERR: Failure when recycling log file\n" dataUsingEncoding:NSUTF8StringEncoding]];
                 break;
             }

@@ -13,10 +13,10 @@
 #include <getopt.h>
 #include <mach-o/ldsyms.h>
 
-#define LOG(fmt, ...)       printf(fmt, ##__VA_ARGS__)
-#define LOG_ERR(fmt, ...)   fprintf(stderr, "ERR: " fmt, ##__VA_ARGS__)
+#define LOG(fmt, ...)       printf(fmt "\n", ##__VA_ARGS__)
+#define LOG_ERR(fmt, ...)   fprintf(stderr, "[ERR]: " fmt "\n", ##__VA_ARGS__)
 #ifdef DEBUG
-#define LOG_DBG(fmt, ...)   LOG("DBG: " fmt, ##__VA_ARGS__)
+#define LOG_DBG(fmt, ...)   LOG("[DBG]: " fmt "\n", ##__VA_ARGS__)
 #else
 #define LOG_DBG(fmt, ...)   (void) (0, ##__VA_ARGS__)
 #endif
@@ -230,11 +230,11 @@ int main(int argc, char *argv[])
     if (optind != argc - 1) usage();
     char *name = argv[optind];
 
-    LOG("%s v%s (built: %s %s  uuid: %s)\n",
+    LOG("%s v%s (built: %s %s  uuid: %s)",
         CMDNAME, VERSION, __DATE__, __TIME__, mh_exec_uuid());
 
     NSTask *task = [[NSTask alloc] init];
-    [task setLaunchPath: @"/bin/sh"];
+    [task setLaunchPath:@"/bin/sh"];
 
     NSString *cmd;
     if (os_version() >= 101200L) {

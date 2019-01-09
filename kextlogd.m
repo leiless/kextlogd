@@ -64,7 +64,7 @@ static int recycle_file(NSFileHandle **fhp, NSString *path, long max_sz, long cy
     if (fh == [NSFileHandle fileHandleWithStandardOutput]) return 0;
     assert(path != nil);
 
-    if (max_sz <= 0 || [fh offsetInFile] < max_sz) return 0;
+    if (max_sz <= 0 || [fh offsetInFile] < (uint64_t) max_sz) return 0;
     if (cycnt <= 0) {
         [fh truncateFileAtOffset:0];
         return 0;

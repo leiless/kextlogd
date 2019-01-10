@@ -69,11 +69,11 @@ static int recycle_file(NSFileHandle **fhp, NSString *path, long max_sz, long ro
 {
     CHECK_NONNULL(fhp);
     CHECK_NONNULL(*fhp);
-    CHECK_NONNULL(path);
 
     NSFileHandle *fh = *fhp;
 
     if (fh == [NSFileHandle fileHandleWithStandardOutput]) return 0;
+    CHECK_NONNULL(path);
 
     if (max_sz == 0 || [fh offsetInFile] < (uint64_t) max_sz) return 0;
     if (rollcnt == 0) {

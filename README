@@ -14,6 +14,7 @@ In such case, a wordaround is to clean the kext cache:
 sudo kextcache -invalidate /
 
 TODO:
-fulfill this README
 add install/uninstall targets into Makefile
+add install_agent/uninstall_agent targets into Makefile
+add a manual page  section 1
 

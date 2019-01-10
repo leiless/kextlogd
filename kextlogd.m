@@ -261,7 +261,7 @@ int main(int argc, char *argv[])
     if (os_version() >= 101200L) {
         cmd = [NSString stringWithFormat:@"/usr/bin/log stream --predicate 'processID == 0 and sender == \"%s\"'", name];
     } else {
-        cmd = [NSString stringWithFormat:@"/usr/bin/syslog -w 0 -k PID 0 -k Sender kernel | /usr/bin/grep -w '%s'", name];
+        cmd = [NSString stringWithFormat:@"/usr/bin/syslog -w 0 -k PID 0 -k Sender kernel -k Message S '%s'", name];
     }
     LOG_DBG("cmd: %s", [cmd UTF8String]);
     [task setArguments:@[@"-c", cmd]];

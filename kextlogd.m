@@ -116,7 +116,8 @@ static void usage(void)
             "%s [-o file] [-x number] [-c number] name\n"
             "           -o, --output            Output file path\n"
             "           -x, --max-size          Maximum single rolling file size\n"
-            "           -c, --rolling-count     Maximum rolling file count\n",
+            "           -c, --rolling-count     Maximum rolling file count\n"
+            "           -v, --version           Print version\n",
             CMDNAME);
     exit(1);
 }
@@ -126,7 +127,7 @@ static void usage(void)
  *  https://stackoverflow.com/questions/10119700
  *  https://lowlevelbits.org/parsing-mach-o-files
  */
-const char *mh_exec_uuid(void)
+static const char *mh_exec_uuid(void)
 {
     const uint8_t *c = (const uint8_t *)(&_mh_execute_header + 1);
     for (uint32_t i = 0; i < _mh_execute_header.ncmds; i++) {
@@ -161,7 +162,7 @@ const char *mh_exec_uuid(void)
  *              0 indicates an error occurred
  * see: sw_vers(1)
  */
-long os_version(void)
+static long os_version(void)
 {
     static volatile long ver = 0;
     if (ver != 0) goto out_exit;
@@ -239,8 +240,8 @@ static void reg_exit_entries(void)
 
 static void print_version(void)
 {
-    LOG("%s v%s (built: %s %s  uuid: %s)",
-        CMDNAME, VERSION, __DATE__, __TIME__, mh_exec_uuid());
+    LOG("%s v%s (built: %s %s uuid: %s compiler: %s)",
+        CMDNAME, VERSION, __DATE__, __TIME__, mh_exec_uuid(), __clang_version__);
 }
 
 int main(int argc, char *argv[])

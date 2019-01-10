@@ -16,7 +16,7 @@
 #define LOG(fmt, ...)       printf(fmt "\n", ##__VA_ARGS__)
 #define LOG_ERR(fmt, ...)   fprintf(stderr, "[ERR]: " fmt "\n", ##__VA_ARGS__)
 #ifdef DEBUG
-#define LOG_DBG(fmt, ...)   LOG("[DBG]: " fmt "\n", ##__VA_ARGS__)
+#define LOG_DBG(fmt, ...)   LOG("[DBG]: " fmt, ##__VA_ARGS__)
 #else
 #define LOG_DBG(fmt, ...)   (void) (0, ##__VA_ARGS__)
 #endif
@@ -192,6 +192,51 @@ out_exit:
     return ver;
 }
 
+static NSTask *task = nil;
+
+static void proc_cleanup(int signo)
+{
+    LOG_DBG("Caught signal: %d", signo);
+
+    CHECK_STATUS(task != nil);
+    int pid = [task processIdentifier];
+    if (pid == 0) {
+        LOG_DBG("Logging process not yet spawn or already dead?");
+        return;
+    }
+
+    if (kill(pid, SIGKILL) != 0) {
+        LOG_ERR("kill(2) failed  errno: %d", errno);
+    }
+}
+
+static inline void proc_cleanup2(void)
+{
+    proc_cleanup(-1);
+}
+
+#define ARRAY_SIZE(a)           (sizeof(a) / sizeof(*a))
+
+/*
+ * see: https://www.gnu.org/software/libc/manual/html_node/Termination-Signals.html
+ */
+static void reg_exit_entries(void)
+{
+    static int sig[] = {SIGHUP, SIGINT, SIGQUIT, SIGTERM, SIGTSTP};
+    static size_t sz = ARRAY_SIZE(sig);
+    size_t i;
+
+    for (i = 0; i < sz; i++) {
+        if (signal(sig[i], proc_cleanup) == SIG_ERR) {
+            LOG_ERR("signal(2) failed  sig: %d errno: %d", sig[i], errno);
+        }
+    }
+
+    if (atexit(proc_cleanup2) != 0) {
+        LOG_ERR("atexit(3) failed  errno: %d", errno);
+    }
+}
+
 int main(int argc, char *argv[])
 {
     if (argc < 2) usage();
@@ -254,7 +299,7 @@ int main(int argc, char *argv[])
 
     LOG_DBG("output: %s max_size: %ld rolling_count: %ld", output, max_sz, rollcnt);
 
-    NSTask *task = [[NSTask alloc] init];
+    task = [[NSTask alloc] init];
     [task setLaunchPath:@"/bin/sh"];
 
     NSString *cmd;
@@ -273,10 +318,11 @@ int main(int argc, char *argv[])
     NSPipe *pipe = [NSPipe pipe];
     [task setStandardOutput:pipe];
     [task setStandardError:pipe];
-    /*
-     * TODO: Use atexit(3) to add a hook to kill spawn child process
-     */
+
+    reg_exit_entries();
+
     [task launch];
+    LOG_DBG("Logging process pid: %d", [task processIdentifier]);
 
     NSFileHandle *fh = [pipe fileHandleForReading];
     NSFileHandle *file;

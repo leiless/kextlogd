@@ -107,7 +107,7 @@ static int recycle_file(NSFileHandle **fhp, NSString *path, long max_sz, long ro
 }
 
 #define CMDNAME     "kextlogd"
-#define VERSION     "0.3"
+#define VERSION     "0.5"
 
 static void usage(void)
 {
@@ -237,6 +237,12 @@ static void reg_exit_entries(void)
     }
 }
 
+static void print_version(void)
+{
+    LOG("%s v%s (built: %s %s  uuid: %s)",
+        CMDNAME, VERSION, __DATE__, __TIME__, mh_exec_uuid());
+}
+
 int main(int argc, char *argv[])
 {
     if (argc < 2) usage();
@@ -249,6 +255,7 @@ int main(int argc, char *argv[])
         {"output", required_argument, NULL, 'o'},
         {"max-size", required_argument, NULL, 'x'},
         {"rolling-count", required_argument, NULL, 'c'},
+        {"version", no_argument, NULL, 'v'},
         {NULL, no_argument, NULL, 0},
     };
 
@@ -256,7 +263,7 @@ int main(int argc, char *argv[])
     int long_index;
     char *endptr;
 
-    while ((opt = getopt_long(argc, argv, "o:x:c:", long_options, &long_index)) != -1) {
+    while ((opt = getopt_long(argc, argv, "o:x:c:v", long_options, &long_index)) != -1) {
         switch (opt) {
         case 'o':
             output = optarg;
@@ -285,6 +292,9 @@ int main(int argc, char *argv[])
                 exit(EXIT_FAILURE);
             }
             break;
+        case 'v':
+            print_version();
+            exit(0);
         case '?':
         default:
             usage();
@@ -294,8 +304,7 @@ int main(int argc, char *argv[])
     if (optind != argc - 1) usage();
     char *name = argv[optind];
 
-    LOG("%s v%s (built: %s %s  uuid: %s)",
-        CMDNAME, VERSION, __DATE__, __TIME__, mh_exec_uuid());
+    print_version();
 
     LOG_DBG("output: %s max_size: %ld rolling_count: %ld", output, max_sz, rollcnt);
 

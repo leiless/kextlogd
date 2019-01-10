@@ -145,6 +145,17 @@ static const char *mh_exec_uuid(void)
     return [[NSString string] UTF8String];
 }
 
+/**
+ * Retrieve last segment of UUID
+ */
+static const char *mh_exec_uuid_ls(void)
+{
+    const char *uuid = mh_exec_uuid();
+    char *p = strrchr(uuid, '-');
+    if (p == NULL) return uuid;
+    return p + 1;
+}
+
 /* XXX: ONLY quote those deprecated functions */
 #define SUPPRESS_WARN_DEPRECATED_DECL_BEGIN     \
     _Pragma("clang diagnostic push")            \
@@ -238,10 +249,17 @@ static void reg_exit_entries(void)
     }
 }
 
+#ifndef __TARGET_OS__
+#define __TARGET_OS__   "apple-darwin"
+#endif
+
 static void print_version(void)
 {
-    LOG("%s v%s (built: %s %s uuid: %s compiler: %s)",
-        CMDNAME, VERSION, __DATE__, __TIME__, mh_exec_uuid(), __clang_version__);
+    LOG("%s v%s (built: %s %s uuid_ls: %s)\n"
+        "compiler: Apple LLVM version %s\n"
+        "target:   %s",
+        CMDNAME, VERSION, __DATE__, __TIME__, mh_exec_uuid_ls(),
+        __clang_version__, __TARGET_OS__);
 }
 
 int main(int argc, char *argv[])

@@ -117,22 +117,6 @@ static int recycle_file(NSFileHandle **fhp, NSString *path, long max_sz, long ro
     return 0;
 }
 
-#define CMDNAME     "kextlogd"
-#define VERSION     "0.5"
-
-static void usage(void)
-{
-    fprintf(stderr,
-            "usage:\n"
-            "%s [-o file] [-x number] [-c number] name\n"
-            "           -o, --output            Output file path\n"
-            "           -x, --max-size          Maximum single rolling file size\n"
-            "           -c, --rolling-count     Maximum rolling file count\n"
-            "           -v, --version           Print version\n",
-            CMDNAME);
-    exit(1);
-}
-
 /**
  * see:
  *  https://stackoverflow.com/questions/10119700
@@ -250,6 +234,23 @@ static void reg_exit_entries(void)
     }
 }
 
+#define CMDNAME     "kextlogd"
+#define VERSION     "0.5"
+
+static void usage(void)
+{
+    fprintf(stderr,
+            "usage:\n"
+            "%s [-o file] [-x number] [-c number] name\n"
+            "           -o, --output            Output file path(single dash `-' for stdout)\n"
+            "           -x, --max-size          Maximum single rolling file size\n"
+            "           -c, --rolling-count     Maximum rolling file count\n"
+            "           -v, --version           Print version\n"
+            "           -h, --help              Print this help\n",
+            CMDNAME);
+    exit(1);
+}
+
 #ifndef __TARGET_OS__
 #define __TARGET_OS__   "apple-darwin"
 #endif
@@ -276,6 +277,7 @@ int main(int argc, char *argv[])
         {"max-size", required_argument, NULL, 'x'},
         {"rolling-count", required_argument, NULL, 'c'},
         {"version", no_argument, NULL, 'v'},
+        {"help", no_argument, NULL, 'h'},
         {NULL, no_argument, NULL, 0},
     };
 
@@ -283,10 +285,10 @@ int main(int argc, char *argv[])
     int long_index;
     char *endptr;
 
-    while ((opt = getopt_long(argc, argv, "o:x:c:v", long_options, &long_index)) != -1) {
+    while ((opt = getopt_long(argc, argv, "o:x:c:vh", long_options, &long_index)) != -1) {
         switch (opt) {
         case 'o':
-            output = optarg;
+            if (strcmp(optarg, "-")) output = optarg;
             break;
         case 'x':
             errno = 0;

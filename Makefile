@@ -3,21 +3,25 @@
 #
 
 CC=clang
-CFLAGS=-framework Foundation -framework CoreServices \
-	-Wall -Wextra -g -DDEBUG \
+FRAMEWORKS+=-framework Foundation -framework CoreServices
+CPPFLAGS+=-D__TARGET_OS__=\"$(shell uname -m)-apple-darwin$(shell uname -r)\"
+CFLAGS+=-std=c99 -Wall -Wextra -Werror \
 	-arch x86_64 -arch i386 \
-	-D__TARGET_OS__=\"$(shell uname -m)-apple-darwin$(shell uname -r)\"
+	$(FRAMEWORKS)
 SOURCES=$(wildcard *.m)
 EXECUTABLE=kextlogd
 RM=rm -rf
 
-all: $(EXECUTABLE)
+all: debug
 
-$(EXECUTABLE): $(SOURCES)
-	$(CC) $(CFLAGS) $< -o $@
+release: $(SOURCES)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $< -o $(EXECUTABLE)
+
+debug: CPPFLAGS += -g -DDEBUG
+debug: release
 
 clean:
-	$(RM) *.o $(EXECUTABLE) *.dSYM
+	$(RM) *.o *.dSYM $(EXECUTABLE)
 
-.PHONY: all clean
+.PHONY: all debug release clean
 

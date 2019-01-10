@@ -8,10 +8,20 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <assert.h>
 #include <unistd.h>
 #include <getopt.h>
 #include <mach-o/ldsyms.h>
+
+/* XXX: ONLY quote those deprecated functions */
+#define SUPPRESS_WARN_DEPRECATED_DECL_BEGIN     \
+    _Pragma("clang diagnostic push")            \
+    _Pragma("clang diagnostic ignored \"-Wdeprecated-declarations\"")
+
+#define SUPPRESS_WARN_DEPRECATED_DECL_END       \
+    _Pragma("clang diagnostic pop")
+
+#define CHECK_STATUS(ex)    NSCParameterAssert(ex)
+#define CHECK_NONNULL(ptr)  NSCParameterAssert(ptr != NULL)
 
 #define LOG(fmt, ...)       printf(fmt "\n", ##__VA_ARGS__)
 #define LOG_ERR(fmt, ...)   fprintf(stderr, "[ERR]: " fmt "\n", ##__VA_ARGS__)
@@ -26,7 +36,7 @@
  */
 static NSFileHandle *create_filehandle(NSString *path)
 {
-    assert(path != nil);
+    CHECK_NONNULL(path);
 
     NSFileManager *fm = [NSFileManager defaultManager];
     if (![fm fileExistsAtPath:path]) {
@@ -57,12 +67,13 @@ static NSFileHandle *create_filehandle(NSString *path)
  */
 static int recycle_file(NSFileHandle **fhp, NSString *path, long max_sz, long rollcnt)
 {
-    assert(fhp != nil);
+    CHECK_NONNULL(fhp);
+    CHECK_NONNULL(*fhp);
+    CHECK_NONNULL(path);
+
     NSFileHandle *fh = *fhp;
-    assert(fh != nil);
 
     if (fh == [NSFileHandle fileHandleWithStandardOutput]) return 0;
-    assert(path != nil);
 
     if (max_sz == 0 || [fh offsetInFile] < (uint64_t) max_sz) return 0;
     if (rollcnt == 0) {
@@ -155,16 +166,6 @@ static const char *mh_exec_uuid_ls(void)
     if (p == NULL) return uuid;
     return p + 1;
 }
-
-/* XXX: ONLY quote those deprecated functions */
-#define SUPPRESS_WARN_DEPRECATED_DECL_BEGIN     \
-    _Pragma("clang diagnostic push")            \
-    _Pragma("clang diagnostic ignored \"-Wdeprecated-declarations\"")
-
-#define SUPPRESS_WARN_DEPRECATED_DECL_END       \
-    _Pragma("clang diagnostic pop")
-
-#define CHECK_STATUS(ex)   NSCParameterAssert(ex)
 
 /**
  * Retrieve system(product-level) version

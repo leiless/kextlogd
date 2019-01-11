@@ -17,8 +17,11 @@
     _Pragma("clang diagnostic push")            \
     _Pragma("clang diagnostic ignored \"-Wdeprecated-declarations\"")
 
-#define SUPPRESS_WARN_DEPRECATED_DECL_END       \
-    _Pragma("clang diagnostic pop")
+#define SUPPRESS_WARN_UNGUARDED_AVAIL_BEGIN      \
+    _Pragma("clang diagnostic push")            \
+    _Pragma("clang diagnostic ignored \"-Wunguarded-availability\"")
+
+#define SUPPRESS_WARN_END _Pragma("clang diagnostic pop")
 
 #define CHECK_STATUS(ex)    NSCParameterAssert(ex)
 #define CHECK_NONNULL(ptr)  NSCParameterAssert(ptr != NULL)
@@ -164,7 +167,9 @@ static long os_version(void)
     if (ver != 0) goto out_exit;
 
     if ([[NSProcessInfo processInfo] respondsToSelector:@selector(operatingSystemVersion)]) {
+SUPPRESS_WARN_UNGUARDED_AVAIL_BEGIN
         NSOperatingSystemVersion v = [[NSProcessInfo processInfo] operatingSystemVersion];
+SUPPRESS_WARN_END
         CHECK_STATUS(v.majorVersion < 100);
         CHECK_STATUS(v.minorVersion < 100);
         CHECK_STATUS(v.patchVersion < 100);
@@ -176,7 +181,7 @@ SUPPRESS_WARN_DEPRECATED_DECL_BEGIN
         if (Gestalt(gestaltSystemVersionMajor, v) == noErr &&
             Gestalt(gestaltSystemVersionMinor, v+1) == noErr &&
             Gestalt(gestaltSystemVersionBugFix, v+2) == noErr) {
-SUPPRESS_WARN_DEPRECATED_DECL_END
+SUPPRESS_WARN_END
             CHECK_STATUS(v[0] < 100);
             CHECK_STATUS(v[1] < 100);
             CHECK_STATUS(v[2] < 100);

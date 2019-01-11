@@ -338,7 +338,9 @@ int main(int argc, char *argv[])
     [task setLaunchPath:@"/bin/sh"];
 
     NSString *cmd;
-    if (os_version() >= 101200L) {
+    if (os_version() >= 101300L) {
+        cmd = [NSString stringWithFormat:@"/usr/bin/log stream --style compact --predicate 'processID == 0 and sender == \"%s\"'", name];
+    } else if (os_version() >= 101200L) {
         cmd = [NSString stringWithFormat:@"/usr/bin/log stream --predicate 'processID == 0 and sender == \"%s\"'", name];
     } else {
         cmd = [NSString stringWithFormat:@"/usr/bin/syslog -F '$((Time)(JZ)) $Host <$((Level)(str))> $(Sender)[$(PID)]: $Message' -w 0 -k PID 0 -k Sender kernel -k Message S '%s'", name];

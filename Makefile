@@ -8,6 +8,7 @@ CPPFLAGS+=-D__TARGET_OS__=\"$(shell uname -m)-apple-darwin_$(shell uname -r)\" \
 	-D__TZ__=\"$(shell date +%z)\"
 CFLAGS+=-std=c99 -Wall -Wextra -Werror \
 	-arch x86_64 -arch i386 \
+	-mmacosx-version-min=10.4 \
 	$(FRAMEWORKS)
 SOURCES=$(wildcard *.m)
 EXECUTABLE=kextlogd

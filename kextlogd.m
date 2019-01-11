@@ -13,12 +13,12 @@
 #include <mach-o/ldsyms.h>
 
 /* XXX: ONLY quote those deprecated functions */
-#define SUPPRESS_WARN_DEPRECATED_DECL_BEGIN     \
-    _Pragma("clang diagnostic push")            \
+#define SUPPRESS_WARN_DEPRECATED_DECL_BEGIN         \
+    _Pragma("clang diagnostic push")                \
     _Pragma("clang diagnostic ignored \"-Wdeprecated-declarations\"")
 
-#define SUPPRESS_WARN_UNGUARDED_AVAIL_BEGIN      \
-    _Pragma("clang diagnostic push")            \
+#define SUPPRESS_WARN_UNGUARDED_AVAIL_BEGIN         \
+    _Pragma("clang diagnostic push")                \
     _Pragma("clang diagnostic ignored \"-Wunguarded-availability\"")
 
 #define SUPPRESS_WARN_END _Pragma("clang diagnostic pop")

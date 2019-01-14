@@ -322,7 +322,7 @@ int main(int argc, char *argv[])
     int long_index;
     char *endptr;
 
-    while ((opt = getopt_long(argc, argv, "o:x:c:vh", long_options, &long_index)) != -1) {
+    while ((opt = getopt_long(argc, argv, "o:x:c:fivh", long_options, &long_index)) != -1) {
         switch (opt) {
         case 'o':
             if (strcmp(optarg, "-")) output = optarg;

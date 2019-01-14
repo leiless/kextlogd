@@ -250,6 +250,8 @@ static void usage(void)
             "           -o, --output            Output file path(single dash `-' for stdout)\n"
             "           -x, --max-size          Maximum single rolling file size\n"
             "           -c, --rolling-count     Maximum rolling file count\n"
+            "           -f, --fuzzy             Fuzzy match\n"
+            "           -i, --ignore-case       Ignore case(imply fuzzy)\n"
             "           -v, --version           Print version\n"
             "           -h, --help              Print this help\n",
             CMDNAME);
@@ -273,6 +275,29 @@ static void print_version(void)
         __clang_version__, __TARGET_OS__);
 }
 
+#define LOG_FLAG_FUZZY          0x00000001
+#define LOG_FLAG_IGNORE_CASE    0x00000002
+
+static NSString *build_sierra_log_string(const char *name, int flags)
+{
+    NSMutableString *str = [NSMutableString string];
+
+    [str appendString:@"/usr/bin/log stream "];
+    if (os_version() >= 101300L) {
+        [str appendString:@"--style compact "];
+    }
+    [str appendString:@"--predicate 'processID == 0 AND "];
+    if (flags & LOG_FLAG_IGNORE_CASE) {
+        [str appendFormat:@"eventMessage CONTAINS[cd] \"%s\"'", name];
+    } else if (flags & LOG_FLAG_FUZZY) {
+        [str appendFormat:@"eventMessage CONTAINS \"%s\"'", name];
+    } else {
+        [str appendFormat:@"sender == \"%s\"'", name];
+    }
+
+    return str;
+}
+
 int main(int argc, char *argv[])
 {
     if (argc < 2) usage();
@@ -280,11 +305,14 @@ int main(int argc, char *argv[])
     const char *output = NULL;
     long max_sz = 0;
     long rollcnt = 0;
+    int flags = 0;
 
     static struct option long_options[] = {
         {"output", required_argument, NULL, 'o'},
         {"max-size", required_argument, NULL, 'x'},
         {"rolling-count", required_argument, NULL, 'c'},
+        {"fuzzy", no_argument, NULL, 'f'},
+        {"ignore-case", no_argument, NULL, 'i'},
         {"version", no_argument, NULL, 'v'},
         {"help", no_argument, NULL, 'h'},
         {NULL, no_argument, NULL, 0},
@@ -323,6 +351,12 @@ int main(int argc, char *argv[])
                 exit(EXIT_FAILURE);
             }
             break;
+        case 'i':
+            flags |= LOG_FLAG_IGNORE_CASE;
+            /* Fall through */
+        case 'f':
+            flags |= LOG_FLAG_FUZZY;
+            break;
         case 'v':
             print_version();
             exit(0);
@@ -343,10 +377,8 @@ int main(int argc, char *argv[])
     [task setLaunchPath:@"/bin/sh"];
 
     NSString *cmd;
-    if (os_version() >= 101300L) {
-        cmd = [NSString stringWithFormat:@"/usr/bin/log stream --style compact --predicate 'processID == 0 and sender == \"%s\"'", name];
-    } else if (os_version() >= 101200L) {
-        cmd = [NSString stringWithFormat:@"/usr/bin/log stream --predicate 'processID == 0 and sender == \"%s\"'", name];
+    if (os_version() >= 101200L) {
+        cmd = build_sierra_log_string(name, flags);
     } else {
         cmd = [NSString stringWithFormat:@"/usr/bin/syslog -F '$((Time)(JZ)) $Host <$((Level)(str))> $(Sender)[$(PID)]: $Message' -w 0 -k PID 0 -k Sender kernel -k Message S '%s'", name];
     }

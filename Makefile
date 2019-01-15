@@ -5,7 +5,7 @@
 CC=clang
 FRAMEWORKS+=-framework Foundation -framework CoreServices
 CPPFLAGS+=-D__TARGET_OS__=\"$(shell uname -m)-apple-darwin_$(shell uname -r)\" \
-	-D__TZ__=\"$(shell date +%z)\"
+	-D__TS__=\"$(shell date +'%Y/%m/%d\ %H:%M:%S%z')\"
 CFLAGS+=-std=c99 -Wall -Wextra -Werror \
 	-arch x86_64 -arch i386 \
 	-mmacosx-version-min=10.4 \

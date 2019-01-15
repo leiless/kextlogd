@@ -252,8 +252,8 @@ static void usage(void)
     exit(1);
 }
 
-#ifndef __TZ__
-#define __TZ__          "+0000"
+#ifndef __TS__
+#define __TS__          "????/??/?? ??:??:??+????"
 #endif
 
 #ifndef __TARGET_OS__
@@ -262,10 +262,10 @@ static void usage(void)
 
 static void print_version(void)
 {
-    LOG("%s v%s (built: %s %s%s uuid_ls: %s)\n"
+    LOG("%s v%s (built: %s uuid_ls: %s)\n"
         "compiler: Apple LLVM version %s\n"
         "target:   %s",
-        CMDNAME, VERSION, __DATE__, __TIME__, __TZ__, mh_exec_uuid_ls(),
+        CMDNAME, VERSION, __TS__, mh_exec_uuid_ls(),
         __clang_version__, __TARGET_OS__);
 }
 

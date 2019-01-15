@@ -17,10 +17,6 @@
     _Pragma("clang diagnostic push")                \
     _Pragma("clang diagnostic ignored \"-Wdeprecated-declarations\"")
 
-#define SUPPRESS_WARN_UNGUARDED_AVAIL_BEGIN         \
-    _Pragma("clang diagnostic push")                \
-    _Pragma("clang diagnostic ignored \"-Wunguarded-availability\"")
-
 #define SUPPRESS_WARN_END _Pragma("clang diagnostic pop")
 
 #define CHECK_STATUS(ex)    NSCParameterAssert(ex)
@@ -167,9 +163,7 @@ static long os_version(void)
     if (ver != 0) goto out_exit;
 
     if ([[NSProcessInfo processInfo] respondsToSelector:@selector(operatingSystemVersion)]) {
-SUPPRESS_WARN_UNGUARDED_AVAIL_BEGIN
         NSOperatingSystemVersion v = [[NSProcessInfo processInfo] operatingSystemVersion];
-SUPPRESS_WARN_END
         CHECK_STATUS(v.majorVersion < 100);
         CHECK_STATUS(v.minorVersion < 100);
         CHECK_STATUS(v.patchVersion < 100);

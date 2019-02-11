@@ -1,7 +1,7 @@
 /**
  * Kernel extension logging utility
  *
- * Created 180817
+ * Created 180817 lynnl
  */
 
 #import <Foundation/Foundation.h>
@@ -234,7 +234,7 @@ static void reg_exit_entries(void)
 }
 
 #define CMDNAME     "kextlogd"
-#define VERSION     "0.5"
+#define VERSION     "0.6"
 
 static void usage(void)
 {
@@ -423,7 +423,7 @@ int main(int argc, char *argv[])
                 [file writeData:[@"\nERR: EOF when reading from pipe\n" dataUsingEncoding:NSUTF8StringEncoding]];
             } @catch (NSException *e) {
                 if ([[e name] isEqualToString:NSFileHandleOperationException]) {
-                    LOG_ERR("\nERR: EOF when reading from pipe  ex: %s\n", [[e description] UTF8String]);
+                    LOG_ERR("EOF when reading from pipe  ex: %s\n", [[e description] UTF8String]);
                 } else {
                     @throw e;
                     __builtin_unreachable();

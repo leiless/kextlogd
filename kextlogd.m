@@ -419,7 +419,16 @@ int main(int argc, char *argv[])
                 break;
             }
         } else {
-            [file writeData:[@"\nERR: EOF when reading from pipe\n" dataUsingEncoding:NSUTF8StringEncoding]];
+            @try{
+                [file writeData:[@"\nERR: EOF when reading from pipe\n" dataUsingEncoding:NSUTF8StringEncoding]];
+            } @catch (NSException *e) {
+                if ([[e name] isEqualToString:NSFileHandleOperationException]) {
+                    LOG_ERR("\nERR: EOF when reading from pipe  ex: %s\n", [[e description] UTF8String]);
+                } else {
+                    @throw e;
+                    __builtin_unreachable();
+                }
+            }
             break;
         }
     }

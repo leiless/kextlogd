@@ -234,7 +234,7 @@ static void reg_exit_entries(void)
 }
 
 #define CMDNAME     "kextlogd"
-#define VERSION     "0.6"
+#define VERSION     "0.7"
 
 static void usage(void)
 {

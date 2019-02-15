@@ -244,8 +244,9 @@ static void usage(void)
             "           -o, --output            Output file path(single dash `-' for stdout)\n"
             "           -x, --max-size          Maximum single rolling file size\n"
             "           -c, --rolling-count     Maximum rolling file count\n"
-            "           -f, --fuzzy             Fuzzy match\n"
             "           -i, --ignore-case       Ignore case(imply fuzzy)\n"
+            "           -f, --fuzzy             Fuzzy match\n"
+            "           -C, --color             Highlight log messages(best effort)\n"
             "           -v, --version           Print version\n"
             "           -h, --help              Print this help\n",
             CMDNAME);
@@ -271,15 +272,21 @@ static void print_version(void)
 
 #define LOG_FLAG_FUZZY          0x00000001
 #define LOG_FLAG_IGNORE_CASE    0x00000002
+#define LOG_FLAG_COLOR_AUTO     0x00000004
 
 static NSString *build_sierra_log_string(const char *name, int flags)
 {
     NSMutableString *str = [NSMutableString string];
 
     [str appendString:@"/usr/bin/log stream "];
+
     if (os_version() >= 101300L) {
         [str appendString:@"--style compact "];
+        if (flags & LOG_FLAG_COLOR_AUTO) {
+            [str appendString:@"--color=auto "];
+        }
     }
+
     [str appendString:@"--predicate 'processID == 0 AND "];
     if (flags & LOG_FLAG_IGNORE_CASE) {
         [str appendFormat:@"eventMessage CONTAINS[cd] \"%s\"'", name];
@@ -305,8 +312,9 @@ int main(int argc, char *argv[])
         {"output", required_argument, NULL, 'o'},
         {"max-size", required_argument, NULL, 'x'},
         {"rolling-count", required_argument, NULL, 'c'},
-        {"fuzzy", no_argument, NULL, 'f'},
         {"ignore-case", no_argument, NULL, 'i'},
+        {"fuzzy", no_argument, NULL, 'f'},
+        {"color", no_argument, NULL, 'C'},
         {"version", no_argument, NULL, 'v'},
         {"help", no_argument, NULL, 'h'},
         {NULL, no_argument, NULL, 0},
@@ -316,7 +324,7 @@ int main(int argc, char *argv[])
     int long_index;
     char *endptr;
 
-    while ((opt = getopt_long(argc, argv, "o:x:c:fivh", long_options, &long_index)) != -1) {
+    while ((opt = getopt_long(argc, argv, "o:x:c:ifCvh", long_options, &long_index)) != -1) {
         switch (opt) {
         case 'o':
             if (strcmp(optarg, "-")) output = optarg;
@@ -350,6 +358,9 @@ int main(int argc, char *argv[])
             /* Fall through */
         case 'f':
             flags |= LOG_FLAG_FUZZY;
+            break;
+        case 'C':
+            flags |= LOG_FLAG_COLOR_AUTO;
             break;
         case 'v':
             print_version();

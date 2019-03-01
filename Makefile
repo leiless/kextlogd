@@ -12,18 +12,21 @@ CFLAGS+=-std=c99 -Wall -Wextra -Werror \
 	$(FRAMEWORKS)
 SOURCES=$(wildcard *.m)
 EXECUTABLE=kextlogd
-RM=rm -rf
+RM=rm
 
 all: debug
 
+release: CFLAGS += -Os
 release: $(SOURCES)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $< -o $(EXECUTABLE)
 
 debug: CPPFLAGS += -g -DDEBUG
-debug: release
+debug: CFLAGS += -O0
+debug: $(SOURCES)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $< -o $(EXECUTABLE)
 
 clean:
-	$(RM) *.o *.dSYM $(EXECUTABLE)
+	$(RM) -rf *.o *.dSYM $(EXECUTABLE)
 
 .PHONY: all debug release clean
 

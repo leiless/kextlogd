@@ -5,6 +5,7 @@
  */
 
 #import <Foundation/Foundation.h>
+#import <IOKit/kext/KextManager.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,8 +20,14 @@
 
 #define SUPPRESS_WARN_END _Pragma("clang diagnostic pop")
 
+#define ARC_POOL_BEGIN      @autoreleasepool {
+#define ARC_POOL_END        }
+
 #define CHECK_STATUS(ex)    NSCParameterAssert(ex)
 #define CHECK_NONNULL(ptr)  NSCParameterAssert(ptr != NULL)
+
+#define ASSERT                  NSCParameterAssert
+#define ASSERT_CF_TYPE(v, t)    ASSERT(CFGetTypeID(v) == t)
 
 #define LOG(fmt, ...)       printf(fmt "\n", ##__VA_ARGS__)
 #define LOG_ERR(fmt, ...)   fprintf(stderr, "[ERR]: " fmt "\n", ##__VA_ARGS__)
@@ -234,23 +241,25 @@ static void reg_exit_entries(void)
 }
 
 #define CMDNAME     "kextlogd"
-#define VERSION     "0.7"
+#define VERSION     "0.9"
 
 static void usage(void)
 {
     fprintf(stderr,
             "usage:\n"
-            "%s [-o file] [-x number] [-c number] name\n"
+            "%s [-o file] [-x number] [-n number] [-ifcvh] [-b] <name>\n"
             "           -o, --output            Output file path(single dash `-' for stdout)\n"
             "           -x, --max-size          Maximum single rolling file size\n"
-            "           -c, --rolling-count     Maximum rolling file count\n"
+            "           -n, --rolling-count     Maximum rolling file count\n"
+            "           -b, --bundle-id         The <name> is a bundle identifier\n"
             "           -i, --ignore-case       Ignore case(imply fuzzy)\n"
             "           -f, --fuzzy             Fuzzy match\n"
-            "           -C, --color             Highlight log messages(best effort)\n"
+            "           -c, --color             Highlight log messages(best effort)\n"
             "           -v, --version           Print version\n"
             "           -h, --help              Print this help\n",
             CMDNAME);
     exit(1);
+    __builtin_unreachable();
 }
 
 #ifndef __TS__
@@ -299,19 +308,62 @@ static NSString *build_sierra_log_string(const char *name, int flags)
     return str;
 }
 
+#define KEXT_NAME_MAX               256   /* Hypothesis */
+#define kOSBundleExecutablePath     CFSTR("OSBundleExecutablePath")
+
+static char * __nullable name_from_bid(const char *bid)
+{
+    static char name[KEXT_NAME_MAX];
+    char *p = NULL;
+    CFArrayRef a1 = (__bridge CFArrayRef) @[@(bid)];
+    CFArrayRef a2 = (__bridge CFArrayRef) @[(__bridge NSString *) kOSBundleExecutablePath];
+    CFDictionaryRef info = KextManagerCopyLoadedKextInfo(a1, a2);
+    CFTypeRef inner;
+    CFTypeRef cfpath;
+    const char *path;
+    const char *p2;
+
+    if (CFDictionaryGetCount(info) != 1) goto out_exit;
+
+    inner = CFDictionaryGetValue(info, CFArrayGetValueAtIndex(a1, 0));
+    if (inner == NULL) goto out_exit;
+    ASSERT_CF_TYPE(inner, CFDictionaryGetTypeID());
+
+    cfpath = CFDictionaryGetValue(inner, kOSBundleExecutablePath);
+    if (cfpath == NULL) goto out_exit;
+    ASSERT_CF_TYPE(cfpath, CFStringGetTypeID());
+
+    path = CFStringGetCStringPtr(cfpath, kCFStringEncodingUTF8);
+
+    p2 = strrchr(path, '/');
+    if (p2 == NULL) goto out_exit;
+
+    (void) strncpy(name, p2 + 1, KEXT_NAME_MAX-1);
+    name[KEXT_NAME_MAX-1] = '\0';
+    p = name;
+
+out_exit:
+    CFRelease(info);
+    return p;
+}
+
 int main(int argc, char *argv[])
 {
+    ARC_POOL_BEGIN
+
     if (argc < 2) usage();
 
     const char *output = NULL;
     long max_sz = 0;
     long rollcnt = 0;
     int flags = 0;
+    int is_bid = 0;
 
     static struct option long_options[] = {
         {"output", required_argument, NULL, 'o'},
         {"max-size", required_argument, NULL, 'x'},
         {"rolling-count", required_argument, NULL, 'n'},
+        {"bundle-id", no_argument, NULL, 'b'},
         {"ignore-case", no_argument, NULL, 'i'},
         {"fuzzy", no_argument, NULL, 'f'},
         {"color", no_argument, NULL, 'c'},
@@ -324,7 +376,7 @@ int main(int argc, char *argv[])
     int long_index;
     char *endptr;
 
-    while ((opt = getopt_long(argc, argv, "o:x:n:ifcvh", long_options, &long_index)) != -1) {
+    while ((opt = getopt_long(argc, argv, "o:x:n:bifcvh", long_options, &long_index)) != -1) {
         switch (opt) {
         case 'o':
             if (strcmp(optarg, "-")) output = optarg;
@@ -353,6 +405,9 @@ int main(int argc, char *argv[])
                 exit(EXIT_FAILURE);
             }
             break;
+        case 'b':
+            is_bid = 1;
+            break;
         case 'i':
             flags |= LOG_FLAG_IGNORE_CASE;
             /* Fall through */
@@ -372,9 +427,12 @@ int main(int argc, char *argv[])
     }
 
     if (optind != argc - 1) usage();
-    char *name = argv[optind];
+    char *name = is_bid ? name_from_bid(argv[optind]) : argv[optind];
 
-    print_version();
+    if (is_bid && name == NULL) {
+        LOG_ERR("Cannot found kext bundle identifier '%s'", argv[optind]);
+        exit(EXIT_FAILURE);
+    }
 
     LOG_DBG("output: %s max_size: %ld rolling_count: %ld", output, max_sz, rollcnt);
 
@@ -447,6 +505,8 @@ int main(int argc, char *argv[])
     [file closeFile];
 out_exit:
     [task terminate];
+
+    ARC_POOL_END
     return 1;
 }
 

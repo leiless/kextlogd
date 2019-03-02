@@ -311,10 +311,10 @@ int main(int argc, char *argv[])
     static struct option long_options[] = {
         {"output", required_argument, NULL, 'o'},
         {"max-size", required_argument, NULL, 'x'},
-        {"rolling-count", required_argument, NULL, 'c'},
+        {"rolling-count", required_argument, NULL, 'n'},
         {"ignore-case", no_argument, NULL, 'i'},
         {"fuzzy", no_argument, NULL, 'f'},
-        {"color", no_argument, NULL, 'C'},
+        {"color", no_argument, NULL, 'c'},
         {"version", no_argument, NULL, 'v'},
         {"help", no_argument, NULL, 'h'},
         {NULL, no_argument, NULL, 0},
@@ -324,7 +324,7 @@ int main(int argc, char *argv[])
     int long_index;
     char *endptr;
 
-    while ((opt = getopt_long(argc, argv, "o:x:c:ifCvh", long_options, &long_index)) != -1) {
+    while ((opt = getopt_long(argc, argv, "o:x:n:ifcvh", long_options, &long_index)) != -1) {
         switch (opt) {
         case 'o':
             if (strcmp(optarg, "-")) output = optarg;
@@ -341,7 +341,7 @@ int main(int argc, char *argv[])
                 exit(EXIT_FAILURE);
             }
             break;
-        case 'c':
+        case 'n':
             errno = 0;
             rollcnt = strtol(optarg, &endptr, 10);
             if (errno != 0) {
@@ -359,7 +359,7 @@ int main(int argc, char *argv[])
         case 'f':
             flags |= LOG_FLAG_FUZZY;
             break;
-        case 'C':
+        case 'c':
             flags |= LOG_FLAG_COLOR_AUTO;
             break;
         case 'v':

@@ -252,7 +252,7 @@ static void usage(void)
             "           -x, --max-size          Maximum single rolling file size\n"
             "           -n, --rolling-count     Maximum rolling file count\n"
             "           -b, --bundle-id         The <name> is a bundle identifier\n"
-            "           -i, --ignore-case       Ignore case(imply fuzzy)\n"
+            "           -i, --ignore-case       Ignore case\n"
             "           -f, --fuzzy             Fuzzy match\n"
             "           -c, --color             Highlight log messages(best effort)\n"
             "           -v, --version           Print version\n"
@@ -410,7 +410,7 @@ int main(int argc, char *argv[])
             break;
         case 'i':
             flags |= LOG_FLAG_IGNORE_CASE;
-            /* Fall through */
+            break;
         case 'f':
             flags |= LOG_FLAG_FUZZY;
             break;

@@ -252,7 +252,7 @@ static void usage(void)
             "           -x, --max-size          Maximum single rolling file size\n"
             "           -n, --rolling-count     Maximum rolling file count\n"
             "           -b, --bundle-id         The <name> is a bundle identifier\n"
-            "           -i, --ignore-case       Ignore case\n"
+            "           -i, --ignore-case       Ignore case(imply fuzzy)\n"
             "           -f, --fuzzy             Fuzzy match\n"
             "           -c, --color             Highlight log messages(best effort)\n"
             "           -v, --version           Print version\n"
@@ -298,9 +298,9 @@ static NSString *build_sierra_log_string(const char *name, int flags)
 
     [str appendString:@"--predicate 'processID == 0 AND "];
     if (flags & LOG_FLAG_IGNORE_CASE) {
-        [str appendFormat:@"eventMessage CONTAINS[cd] \"%s\"'", name];
+        [str appendFormat:@"(sender == \"%s\" OR eventMessage CONTAINS[cd] \"%s\")'", name, name];
     } else if (flags & LOG_FLAG_FUZZY) {
-        [str appendFormat:@"eventMessage CONTAINS \"%s\"'", name];
+        [str appendFormat:@"(sender == \"%s\" OR eventMessage CONTAINS \"%s\")'", name, name];
     } else {
         [str appendFormat:@"sender == \"%s\"'", name];
     }

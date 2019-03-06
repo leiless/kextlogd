@@ -35,7 +35,5 @@ sudo kextload -v foobar.kext
 
 * add install/uninstall targets into Makefile
 
-* add install_agent/uninstall_agent targets into Makefile
-
-* add a manual page  section 1
+* add install agent/uninstall agent targets into Makefile
 
